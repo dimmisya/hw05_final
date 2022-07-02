@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Об авторе проекта{% endblock %}
+{% block content %}
+<div class="container py-5">
+<h1>Привет, я автор</h1>
+<article>
+<p>
+  Тут я размещу информацию о себе, используя свои умения верстать.
+  Картинки, блоки, элементы бустрап. А может быть, просто напишу несколько абзацев текста. 
+</p>
+<img src="{% static 'img/venom_small.png' %}" width="76" height="102" class="d-inline-block align-top" alt="">
+</article>
+</div>  
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block title %} Это главная страница проекта Yatube {% endblock %}
+{% block content %}
+      <div class="container py-5">     
+        <h1>Последние обновления на сайте</h1>
+        {% include 'includes/switcher.html' %}
+        {% for post in page_obj %}
+          <article>
+          {% include 'includes/posts.html' %}
+          </article>
+          {% if post.group %}
+            <a href="{% url 'posts:group' post.group.slug %}">все записи группы</a>
+          {% endif %}
+            <a href="{% url 'posts:profile' post.author.username %}">все посты пользователя</a>
+            <a href="{% url 'posts:post_detail' post.pk %}">детали поста</a>
+          {% if post.author == request.user  %}
+            <a href="{% url 'posts:post_edit' post.pk %}">редактировать пост</a>
+          {% endif %}
+          {% if not forloop.last %}<hr>{% endif %}
+        {% endfor %}
+        {% include 'includes/paginator.html' %}
+      </div>  
+{% endblock %}
