@@ -30,10 +30,10 @@ def profile(request, username):
     number_of_posts = posts.count()
     page_obj = pagination(request, posts)
     if (request.user.is_authenticated
-       and len(request.user.follower.filter(author=user)) == 0):
-        following = False
-    else:
+       and request.user.follower.filter(author=user).exists()):
         following = True
+    else:
+        following = False
     context = {
         'page_obj': page_obj,
         'username': user,
@@ -62,7 +62,7 @@ def post_create(request):
         if form.is_valid():
             post = form.save(commit=False)
             post.author = request.user
-            form.save()
+            post.save()
             return redirect('posts:profile', username=request.user.username)
     form = PostForm()
     return render(request, 'posts/create_post.html', {'form': form})
@@ -78,13 +78,15 @@ def post_edit(request, post_id):
         form = PostForm(instance=post)
         context = {'is_edit': True, 'form': form}
         return render(request, 'posts/create_post.html', context)
-    if request.method == 'POST':
+    elif request.method == 'POST':
         form = PostForm(request.POST,
                         files=request.FILES or None,
                         instance=post)
         if form.is_valid():
             form.save()
             return redirect('posts:post_detail', post_id)
+        else:
+            return render(request, 'posts/create_post.html', context)
 
 
 @login_required
@@ -101,12 +103,9 @@ def add_comment(request, post_id):
 
 @login_required
 def follow_index(request):
-    user = request.user
-    following_authors = user.follower.values_list('author_id', flat=True)
-    posts = Post.objects.filter(author_id__in=following_authors)
+    posts = Post.objects.filter(author__following__user=request.user)
     page_obj = pagination(request, posts)
-    context = {'page_obj': page_obj,
-               'following_authors': following_authors, }
+    context = {'page_obj': page_obj, }
     return render(request, 'posts/follow.html', context)
 
 
@@ -121,5 +120,6 @@ def profile_follow(request, username):
 @login_required
 def profile_unfollow(request, username):
     author = get_object_or_404(User, username=username)
-    Follow.objects.filter(user=request.user, author=author).delete()
+    follow = get_object_or_404(Follow, user=request.user, author=author)
+    follow.delete()
     return redirect('posts:follow_index')

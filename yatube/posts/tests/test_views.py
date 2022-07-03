@@ -95,11 +95,12 @@ class PostPagesTests(TestCase):
         for reverse_name in reverse_names:
             response = self.authorized_author.get(reverse_name)
             first_object = response.context['page_obj'][0]
-            context = {'auth': first_object.author.username,
-                       'Тестовый пост для проверки': first_object.text,
-                       'Тестовая группа': first_object.group.title,
-                       'posts/small.gif': first_object.image.name,
-                       }
+            context = {
+                'auth': first_object.author.username,
+                'Тестовый пост для проверки': first_object.text,
+                'Тестовая группа': first_object.group.title,
+                'posts/small.gif': first_object.image.name,
+            }
             for expected_context, test_context in context.items():
                 with self.subTest(expected_context=expected_context):
 
@@ -109,12 +110,13 @@ class PostPagesTests(TestCase):
         """Шаблон страницы поста сформирован с правильным контекстом."""
         response = self.authorized_author.get(self.reverse_post_detail)
         object = response.context['post']
-        context = {'auth': object.author.username,
-                   'Тестовый пост для проверки': object.text,
-                   'Тестовая группа': object.group.title,
-                   1: object.pk,
-                   'posts/small.gif': object.image.name,
-                   }
+        context = {
+            'auth': object.author.username,
+            'Тестовый пост для проверки': object.text,
+            'Тестовая группа': object.group.title,
+            1: object.pk,
+            'posts/small.gif': object.image.name,
+        }
 
         for expected_context, test_context in context.items():
             with self.subTest(expected_context=expected_context):
@@ -133,6 +135,7 @@ class PostPagesTests(TestCase):
                 'group': forms.fields.ChoiceField,
                 'image': forms.fields.ImageField,
             }
+
             for value, expected in form_fields.items():
                 with self.subTest(value=value):
                     form_field = response.context.get('form').fields.get(value)
@@ -155,10 +158,10 @@ class PaginatorViewsTest(TestCase):
                              reverse('posts:profile',
                                      kwargs={'username': 'auth'}), )
         cls.posts_count = 13
-        for i in range(cls.posts_count):
+        for number in range(cls.posts_count):
             Post.objects.create(
                 author=cls.author,
-                text=f'Тестовый пост {i} для проверки',
+                text=f'Тестовый пост {number} для проверки',
                 group=cls.group
             )
         cache.clear()
@@ -168,6 +171,7 @@ class PaginatorViewsTest(TestCase):
         for reverse_name in PaginatorViewsTest.reverse_names:
             with self.subTest(reverse_name=reverse_name):
                 response = self.client.get(reverse_name)
+
                 self.assertEqual(len(response.context['page_obj']),
                                  settings.POSTS_PER_PAGE)
 
@@ -176,7 +180,8 @@ class PaginatorViewsTest(TestCase):
         for reverse_name in PaginatorViewsTest.reverse_names:
             with self.subTest(reverse_name=reverse_name):
                 response = self.client.get(reverse_name + '?page=2')
-                self.assertEqual(len(response.context['page_obj']),
+
+                self.assertEqual(response.context['page_obj'].__len__(),
                                  PaginatorViewsTest.posts_count
                                  - settings.POSTS_PER_PAGE)
 
@@ -204,17 +209,22 @@ class PostCreateViewsTest(TestCase):
 
     def test_list_pages_contains_post(self):
         """Проверка, что пост попал на нужные страницы"""
-        pages_posts_count = {
-            reverse('posts:index'): 1,
-            reverse('posts:group', kwargs={'slug': 'foto'}): 1,
-            reverse('posts:group', kwargs={'slug': 'lyrics'}): 0,
-            reverse('posts:profile', kwargs={'username': 'auth'}): 1,
+        pages_post_exist = {
+            reverse('posts:index'): True,
+            reverse('posts:group', kwargs={'slug': 'foto'}): True,
+            reverse('posts:group', kwargs={'slug': 'lyrics'}): False,
+            reverse('posts:profile', kwargs={'username': 'auth'}): True,
         }
         cache.clear()
-        for reverse_name, count in pages_posts_count.items():
+
+        for reverse_name, value in pages_post_exist.items():
             with self.subTest(reverse_name=reverse_name):
                 response = self.client.get(reverse_name)
-                self.assertEqual(len(response.context['page_obj']), count)
+
+                self.assertEqual(
+                    response.context['page_obj'].__contains__(self.post),
+                    value
+                )
 
 
 class CommentCreateViewsTest(TestCase):
@@ -232,20 +242,39 @@ class CommentCreateViewsTest(TestCase):
         )
         cls.comment = Comment.objects.create(
             author=cls.author,
-            text='Тестовый коммент для проверки',
+            text='Тестовый коммент',
             post=cls.post_1,
         )
 
+    def test_unauthorized_cant_create_comment(self):
+        """Неавторизованный пользователь не может создать комментарий."""
+        post_detail_url = '/posts/1/comment/'
+        login_url = '/auth/login/'
+        form_data = {
+            'text': 'Тестовый текст',
+        }
+        response = self.client.post(
+            reverse('posts:add_comment', kwargs={'post_id': 1}),
+            data=form_data,
+            follow=True
+        )
+
+        self.assertRedirects(response,
+                             f"{login_url}?next={post_detail_url}")
+
     def test_post_page_contains_comment(self):
         """Проверка, что комментарий попал на нужные страницы"""
-        pages_comments_count = {
-            reverse('posts:post_detail', kwargs={'post_id': 1}): 1,
-            reverse('posts:post_detail', kwargs={'post_id': 2}): 0,
+        pages_comment_exist = {
+            reverse('posts:post_detail', kwargs={'post_id': 1}): True,
+            reverse('posts:post_detail', kwargs={'post_id': 2}): False,
         }
-        for reverse_name, count in pages_comments_count.items():
+
+        for reverse_name, value in pages_comment_exist.items():
             with self.subTest(reverse_name=reverse_name):
                 response = self.client.get(reverse_name)
-                self.assertEqual(len(response.context['comments']), count)
+
+                self.assertEqual(response.context['comments'].filter(
+                    text=self.comment.text).exists(), value)
 
 
 class CacheViewsTest(TestCase):
@@ -268,14 +297,22 @@ class CacheViewsTest(TestCase):
     def test_index_page_cache(self):
         """Проверка работы кэша главной страницы"""
         response = self.client.get(reverse('posts:index'))
-        page_content = response.content
-        self.assertEqual(page_content, response.content)
+        cached_page_content = response.content
+
+        self.assertEqual(
+            response.context['page_obj'].__contains__(CacheViewsTest.post),
+            True
+        )
+
         CacheViewsTest.post.delete()
         response = self.client.get(reverse('posts:index'))
-        self.assertEqual(page_content, response.content)
+
+        self.assertEqual(cached_page_content, response.content)
+
         cache.clear()
         response = self.client.get(reverse('posts:index'))
-        self.assertNotEqual(page_content, response.content)
+
+        self.assertNotEqual(cached_page_content, response.content)
 
 
 class FollowCreateViewsTest(TestCase):
@@ -285,10 +322,12 @@ class FollowCreateViewsTest(TestCase):
         cls.author = User.objects.create_user(username='auth')
         cls.follower = User.objects.create_user(username='follower')
         cls.user = User.objects.create_user(username='user')
-        cls.post = Post.objects.create(
-            author=cls.author,
-            text='Тестовый пост для проверки',
-        )
+        cls.posts_count = 10
+        for number in range(cls.posts_count):
+            Post.objects.create(
+                author=cls.author,
+                text=f'Тестовый пост {number} для проверки',
+            )
 
     def setUp(self):
         self.authorized_follower = Client()
@@ -297,43 +336,61 @@ class FollowCreateViewsTest(TestCase):
         self.authorized_user.force_login(FollowCreateViewsTest.user)
         cache.clear()
 
-    def test_follow_unfollow_work(self):
-        """Проверка создания и удаления подписки """
-        reverse_names = {
-            reverse('posts:profile_follow', kwargs={'username': 'auth'}): 1,
-            reverse('posts:profile_unfollow', kwargs={'username': 'auth'}): 0,
-        }
-        for reverse_name, count in reverse_names.items():
-            with self.subTest(reverse_name=reverse_name):
-                self.authorized_user.get(reverse_name)
-                self.assertEqual(len(Follow.objects.all()), count)
+    def test_follow_work(self):
+        """Проверка создания подписки """
+        self.authorized_user.get(
+            reverse('posts:profile_follow', kwargs={'username': 'auth'})
+        )
+
+        self.assertEqual(
+            Follow.objects.filter(user=self.user, author=self.author).exists(),
+            True
+        )
+
+        Follow.objects.filter(user=self.user, author=self.author).delete()
+
+    def test_unfollow_work(self):
+        """Проверка удаления подписки """
+        Follow.objects.create(
+            user=FollowCreateViewsTest.user,
+            author=FollowCreateViewsTest.author,
+        )
+
+        self.authorized_user.get(
+            reverse('posts:profile_unfollow', kwargs={'username': 'auth'})
+        )
+
+        self.assertEqual(
+            Follow.objects.filter(user=self.user, author=self.author).exists(),
+            False
+        )
 
     def test_follower_list_pages_contains_post(self):
         """Проверка, что пост попал на нужные страницы подписчика"""
-        Follow.objects.create(
+        follow = Follow.objects.create(
             author=FollowCreateViewsTest.author,
             user=FollowCreateViewsTest.follower,
         )
-        pages_posts_count = {
-            reverse('posts:index'): 1,
-            reverse('posts:follow_index'): 1,
-        }
-        for reverse_name, count in pages_posts_count.items():
-            with self.subTest(reverse_name=reverse_name):
-                response = self.authorized_follower.get(reverse_name)
-                self.assertEqual(len(response.context['page_obj']), count)
 
-    def test_user_list_pages_contains_post(self):
+        response = self.authorized_follower.get(reverse('posts:follow_index'))
+
+        for post in Post.objects.filter(author=FollowCreateViewsTest.author):
+            self.assertEqual(
+                response.context['page_obj'].__contains__(post),
+                True
+            )
+
+        follow.delete()
+
+    def test_user_list_pages_not_contains_post(self):
         """Проверка, что пост не попал страницу не подписанного пользователя"""
-        Follow.objects.create(
+        follow = Follow.objects.create(
             author=FollowCreateViewsTest.author,
             user=FollowCreateViewsTest.follower,
         )
-        pages_posts_count = {
-            reverse('posts:index'): 1,
-            reverse('posts:follow_index'): 0,
-        }
-        for reverse_name, count in pages_posts_count.items():
-            with self.subTest(reverse_name=reverse_name):
-                response = self.authorized_user.get(reverse_name)
-                self.assertEqual(len(response.context['page_obj']), count)
+
+        response = self.authorized_user.get(reverse('posts:follow_index'))
+
+        self.assertEqual(response.context['page_obj'].__len__(), 0)
+
+        follow.delete()

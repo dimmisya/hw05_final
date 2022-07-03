@@ -93,32 +93,3 @@ class PostCreateFormTests(TestCase):
                 pk=1,
                 text='Проверка редактирования',).exists()
         )
-
-
-class CommentCreateFormTests(TestCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        cls.author = User.objects.create_user(username='auth')
-        cls.post = Post.objects.create(
-            author=cls.author,
-            text='Тестовый пост для проверки',
-        )
-
-    def setUp(self):
-        self.guest_client = Client()
-        self.post_detail_url = '/posts/1/comment/'
-        self.login_url = '/auth/login/'
-
-    def test_create_comment(self):
-        """Проверка формы создания комментария."""
-        form_data = {
-            'text': 'Тестовый текст',
-        }
-        response = self.guest_client.post(
-            reverse('posts:add_comment', kwargs={'post_id': 1}),
-            data=form_data,
-            follow=True
-        )
-        self.assertRedirects(response,
-                             f"{self.login_url}?next={self.post_detail_url}")
