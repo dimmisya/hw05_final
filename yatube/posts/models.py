@@ -73,6 +73,8 @@ class Comment(models.Model):
         ordering = ('-created',)
         verbose_name = 'Комментарий'
         verbose_name_plural = 'Комментарии'
+        constraints = [models.UniqueConstraint(
+            fields=('user', 'author'), name='unique-follow')]
 
     def __str__(self):
         return self.text[:15]

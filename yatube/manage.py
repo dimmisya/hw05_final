@@ -1,8 +1,7 @@
+# !/usr/bin/env python
 
 import os
 import sys
-
-# !/usr/bin/env python
 
 
 def main():

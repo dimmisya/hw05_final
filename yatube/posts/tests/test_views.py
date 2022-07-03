@@ -250,9 +250,11 @@ class CommentCreateViewsTest(TestCase):
         """Неавторизованный пользователь не может создать комментарий."""
         post_detail_url = '/posts/1/comment/'
         login_url = '/auth/login/'
+        text = 'Тестовый текст'
         form_data = {
-            'text': 'Тестовый текст',
+            'text': text,
         }
+
         response = self.client.post(
             reverse('posts:add_comment', kwargs={'post_id': 1}),
             data=form_data,
@@ -261,6 +263,12 @@ class CommentCreateViewsTest(TestCase):
 
         self.assertRedirects(response,
                              f"{login_url}?next={post_detail_url}")
+
+        response = self.client.get(
+            reverse('posts:post_detail', kwargs={'post_id': 1}))
+
+        self.assertEqual(response.context['comments'].filter(
+                    text=text).exists(), False)
 
     def test_post_page_contains_comment(self):
         """Проверка, что комментарий попал на нужные страницы"""
@@ -322,10 +330,15 @@ class FollowCreateViewsTest(TestCase):
         cls.author = User.objects.create_user(username='auth')
         cls.follower = User.objects.create_user(username='follower')
         cls.user = User.objects.create_user(username='user')
-        cls.posts_count = 10
+        cls.posts_count = 5
         for number in range(cls.posts_count):
             Post.objects.create(
                 author=cls.author,
+                text=f'Тестовый пост {number} для проверки',
+            )
+        for number in range(cls.posts_count):
+            Post.objects.create(
+                author=cls.user,
                 text=f'Тестовый пост {number} для проверки',
             )
 
@@ -378,6 +391,11 @@ class FollowCreateViewsTest(TestCase):
             self.assertEqual(
                 response.context['page_obj'].__contains__(post),
                 True
+            )
+        for post in Post.objects.filter(author=FollowCreateViewsTest.user):
+            self.assertEqual(
+                response.context['page_obj'].__contains__(post),
+                False
             )
 
         follow.delete()
