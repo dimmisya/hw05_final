@@ -267,8 +267,9 @@ class CommentCreateViewsTest(TestCase):
         response = self.client.get(
             reverse('posts:post_detail', kwargs={'post_id': 1}))
 
-        self.assertEqual(response.context['comments'].filter(
-                    text=text).exists(), False)
+        self.assertEqual(
+            response.context['comments'].filter(text=text).exists(),
+            False)
 
     def test_post_page_contains_comment(self):
         """Проверка, что комментарий попал на нужные страницы"""
