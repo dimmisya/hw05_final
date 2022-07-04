@@ -361,8 +361,6 @@ class FollowCreateViewsTest(TestCase):
             True
         )
 
-        Follow.objects.filter(user=self.user, author=self.author).delete()
-
     def test_unfollow_work(self):
         """Проверка удаления подписки """
         Follow.objects.create(
@@ -381,7 +379,7 @@ class FollowCreateViewsTest(TestCase):
 
     def test_follower_list_pages_contains_post(self):
         """Проверка, что пост попал на нужные страницы подписчика"""
-        follow = Follow.objects.create(
+        Follow.objects.create(
             author=FollowCreateViewsTest.author,
             user=FollowCreateViewsTest.follower,
         )
@@ -399,11 +397,9 @@ class FollowCreateViewsTest(TestCase):
                 False
             )
 
-        follow.delete()
-
     def test_user_list_pages_not_contains_post(self):
         """Проверка, что пост не попал страницу не подписанного пользователя"""
-        follow = Follow.objects.create(
+        Follow.objects.create(
             author=FollowCreateViewsTest.author,
             user=FollowCreateViewsTest.follower,
         )
@@ -411,5 +407,3 @@ class FollowCreateViewsTest(TestCase):
         response = self.authorized_user.get(reverse('posts:follow_index'))
 
         self.assertEqual(response.context['page_obj'].__len__(), 0)
-
-        follow.delete()
