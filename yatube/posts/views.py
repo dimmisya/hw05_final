@@ -1,26 +1,53 @@
 from django.contrib.auth.decorators import login_required
+from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.cache import cache_page
-from posts.models import Follow, Group, Post, User
+from posts.models import Follow, Group, Post, User, Like
 
 from .forms import CommentForm, PostForm
-from .utils import pagination
+from .utils import pagination, user_liked_posts
 
 
 @cache_page(20, key_prefix='index_page')
 def index(request):
-    posts = Post.objects.select_related('group', 'author')
+    order = request.GET.get('orderby', '-pub_date')
+    posts = Post.objects.select_related('group', 'author').order_by(order)
     page_obj = pagination(request, posts)
-    return render(request, 'posts/index.html', {'page_obj': page_obj})
+    liked_posts = user_liked_posts(request.user)
+    order_value = {
+        '-pub_date': 'Дата',
+        '-likes_count': 'Лайки',
+        '-comments_count': 'Комментарии',
+    }
+    context = {
+        'page_obj': page_obj,
+        'liked_posts': liked_posts,
+        'order_value': order_value[order],
+    }
+    return render(request, 'posts/index.html', context)
+
+
+def search_result(request):
+    text_search = request.GET.get('q', '/')
+    posts = Post.objects.filter(text__icontains=text_search)
+    page_obj = pagination(request, posts)
+    liked_posts = user_liked_posts(request.user)
+    context = {
+        'page_obj': page_obj,
+        'liked_posts': liked_posts,
+    }
+    return render(request, 'posts/search_result.html', context)
 
 
 def group_posts(request, slug):
     group = get_object_or_404(Group, slug=slug)
     posts = group.posts.select_related('group', 'author')
     page_obj = pagination(request, posts)
+    liked_posts = user_liked_posts(request.user)
     context = {
         'group': group,
-        'page_obj': page_obj, }
+        'page_obj': page_obj,
+        'liked_posts': liked_posts, }
     return render(request, 'posts/group_list.html', context)
 
 
@@ -29,6 +56,7 @@ def profile(request, username):
     posts = user.posts.select_related('group', 'author')
     number_of_posts = posts.count()
     page_obj = pagination(request, posts)
+    liked_posts = user_liked_posts(request.user)
     if (request.user.is_authenticated
        and request.user.follower.filter(author=user).exists()):
         following = True
@@ -38,20 +66,29 @@ def profile(request, username):
         'page_obj': page_obj,
         'username': user,
         'number_of_posts': number_of_posts,
-        'following': following, }
+        'following': following,
+        'liked_posts': liked_posts, }
     return render(request, 'posts/profile.html', context)
 
 
 def post_detail(request, post_id):
     post = get_object_or_404(Post, pk=post_id)
     number_of_posts = post.author.posts.count()
+    number_of_likes = post.likes.count()
     comments = post.comments.select_related('post')
     form = CommentForm(request.POST)
+    if (request.user.is_authenticated
+       and post.likes.filter(user=request.user).exists()):
+        like = True
+    else:
+        like = False
     context = {
         'post': post,
         'number_of_posts': number_of_posts,
         'form': form,
-        'comments': comments, }
+        'comments': comments,
+        'number_of_likes': number_of_likes,
+        'like': like, }
     return render(request, 'posts/post_detail.html', context)
 
 
@@ -98,6 +135,9 @@ def add_comment(request, post_id):
         comment.author = request.user
         comment.post = post
         comment.save()
+        post.comments_count = post.comments.count()
+        post.save()
+        print(post.comments_count)
     return redirect('posts:post_detail', post_id=post_id)
 
 
@@ -124,3 +164,14 @@ def profile_unfollow(request, username):
     if follow.exists():
         follow.delete()
     return redirect('posts:follow_index')
+
+
+@login_required
+def post_like(request, post_id):
+    post = get_object_or_404(Post, pk=post_id)
+    if post.author != request.user:
+        Like.objects.get_or_create(user=request.user, post=post)
+        post.likes_count = post.likes.count()
+        post.save()
+    next = request.GET.get('next', '/')
+    return HttpResponseRedirect(next)

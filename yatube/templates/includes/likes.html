@@ -1,0 +1,19 @@
+{% load user_filters %}
+{% if request.user.is_authenticated and post.author != request.user %}
+{% if post.pk in liked_posts %}
+<a
+  class="btn btn-sm btn-light disabled"
+  href="{% url 'posts:like' post.pk %}?next={{ request.get_full_path|urlencode }}" role="button"
+  aria-disabled="true"
+>
+  Уже лайкнул
+</a>
+{% else %}
+<a
+  class="btn btn-sm btn-primary"
+  href="{% url 'posts:like' post.pk %}?next={{ request.get_full_path|urlencode }}" role="button"
+  >
+  Нравится
+</a>
+{% endif %}
+{% endif %}

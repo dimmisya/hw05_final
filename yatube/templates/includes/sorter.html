@@ -1,0 +1,11 @@
+<div class="dropdown">
+  <span>Сортировка:</span>
+    <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton2" data-bs-toggle="dropdown" aria-expanded="false">
+      {{order_value}}
+    </button>
+    <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="dropdownMenuButton2">
+      <li><a class="dropdown-item" href="{% url 'posts:index' %}?page={{page_obj.number}}&orderby=-pub_date">Дата</a></li>
+      <li><a class="dropdown-item" href="{% url 'posts:index' %}?page={{page_obj.number}}&orderby=-comments_count">Комментарии</a></li>
+      <li><a class="dropdown-item" href="{% url 'posts:index' %}?page={{page_obj.number}}&orderby=-likes_count">Лайки</a></li>
+    </ul>
+  </div>

@@ -4,6 +4,8 @@
       <div class="container py-5">     
         <h1>Последние обновления на сайте</h1>
         {% include 'includes/switcher.html' %}
+        {% include 'includes/sorter.html' %}
+        <br>
         {% for post in page_obj %}
           <article>
           {% include 'includes/posts.html' %}
@@ -12,10 +14,11 @@
             <a href="{% url 'posts:group' post.group.slug %}">все записи группы</a>
           {% endif %}
             <a href="{% url 'posts:profile' post.author.username %}">все посты пользователя</a>
-            <a href="{% url 'posts:post_detail' post.pk %}">детали поста</a>
+            <a href="{% url 'posts:post_detail' post.pk %}">Комментариев: {{ post.comments_count }}</a>
           {% if post.author == request.user  %}
             <a href="{% url 'posts:post_edit' post.pk %}">редактировать пост</a>
           {% endif %}
+          {% include 'includes/likes.html' %}
           {% if not forloop.last %}<hr>{% endif %}
         {% endfor %}
         {% include 'includes/paginator.html' %}

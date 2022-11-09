@@ -41,6 +41,14 @@ class Post(models.Model):
         upload_to='posts/',
         blank=True
     )
+    likes_count = models.IntegerField(
+        'Лайков',
+        default=0
+    )
+    comments_count = models.IntegerField(
+        'Комментариев',
+        default=0
+    )
 
     class Meta:
         ordering = ('-pub_date',)
@@ -97,3 +105,22 @@ class Follow(models.Model):
         verbose_name_plural = 'Подписки'
         constraints = (models.UniqueConstraint(
             fields=('user', 'author'), name='unique-follow'), )
+
+
+class Like(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='likes',
+        verbose_name='Лайкер',
+    )
+    post = models.ForeignKey(
+        Post,
+        on_delete=models.CASCADE,
+        related_name='likes',
+        verbose_name='Пост',
+    )
+
+    class Meta:
+        verbose_name = 'Лайк'
+        verbose_name_plural = 'Лайки'

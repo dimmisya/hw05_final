@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% block title %} Профайл пользователя {{ username }}  {% endblock %}
 {% block content %} 
-      <div class="mb-5">
+      <div class="container py-5">
         <h1>Все посты пользователя 
           {% if username.get_full_name %}
               {{ username.get_full_name }} 
@@ -30,6 +30,7 @@
           {% for post in page_obj %}
           <article>
             {% include 'includes/posts.html' %}
+            {% include 'includes/likes.html' %}
           </article>
           {% if not forloop.last %}<hr>{% endif %}
           {% endfor %}
